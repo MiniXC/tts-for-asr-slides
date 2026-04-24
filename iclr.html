@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>TTSDS2 — ICLR 2026</title>
+
+		<link rel="stylesheet" href="dist/reset.css">
+		<link rel="stylesheet" href="dist/reveal.css">
+		<link rel="stylesheet" href="dist/theme/white.css">
+		<link rel="stylesheet" href="dist/theme/iclr.css">
+		<link rel="stylesheet" href="plugin/highlight/monokai.css">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+
+				<!-- 1. Opener / the joke -->
+				<section class="top-align" style="top: 60px">
+					<div id="opener-spec" style="width: 60%; margin: 0 auto; cursor: pointer; overflow: hidden;"></div>
+					<p style="font-size: 0.4em; margin: 0.1em 0 0 0; color: #9a9a9a;">audio generated with Qwen3-TTS (1.7B)</p>
+					<p style="font-size: 0.65em; margin-top: 0.5em;"><em>Welcome to the image generation session.</em></p>
+					<h2 style="margin: 0.3em 0 0 0;">TTSDS2</h2>
+					<p style="font-size: 0.62em; margin: 0.15em 0 0 0;">Resources and Benchmark for Evaluating Human-Quality Text-to-Speech Systems</p>
+					<p style="font-size: 0.45em; margin: 0.5em 0 0 0; color: #6b6b6b;">
+						Christoph Minixhofer · Ondřej Klejch · Peter Bell<br>
+						<span class="muted">Centre for Speech Technology Research, University of Edinburgh</span>
+					</p>
+				</section>
+
+				<!-- 2. The problem -->
+				<section>
+					<h2>The problem</h2>
+					<ul style="font-size: 0.75em; margin-top: 1em;">
+						<li>Recent TTS systems reach <span class="accent">human parity</span> — listeners cannot reliably tell synthetic from real.</li>
+						<li><span class="accent">MOS</span> is rarely comparable across papers (different listeners, surveys, scales).</li>
+						<li>Papers use many <span class="accent">objective metrics</span> — but most are not validated against subjective ones.</li>
+					</ul>
+					<p style="font-size: 0.6em; margin-top: 1.2em; color: #6b6b6b;"><em>We need an objective metric that agrees with humans across domains, languages, and systems.</em></p>
+				</section>
+
+				<!-- 3. Distributions, not samples -->
+				<section>
+					<h2>Speech synthesis is one-to-many</h2>
+					<p style="font-size: 0.7em;">For a given transcript, infinitely many natural renditions exist<br> We evaluate <span class="accent">distributions</span>, not individual samples.</p>
+					<div id="p5-1" style="width: 80vw; height: 30vh; position: relative; left: 50%; transform: translateX(-50%); margin-top: 0.8em;"></div>
+					<p style="font-size: 0.55em; margin-top: 0.6em; color: #6b6b6b;">
+						<span style="color:#0a2342;">■</span> real speech feature distribution &nbsp;&nbsp;
+						<span style="color:#f98000;">■</span> synthetic speech feature distribution
+					</p>
+				</section>
+
+				<!-- 4. Good TTS: W2 -> 0 -->
+				<section>
+					<h2>Good TTS ⇒ match</h2>
+					<p style="font-size: 0.7em;">If the synthetic distribution matches the real one, the <span class="accent">2-Wasserstein distance</span> \( W_2 \) goes to zero.</p>
+					<div id="p5-2" style="width: 80vw; height: 30vh; position: relative; left: 50%; transform: translateX(-50%); margin-top: 0.8em;"></div>
+					<p style="font-size: 0.6em; margin-top: 0.6em;"><em>\( W_2 \to 0 \)</em></p>
+				</section>
+
+				<!-- 5. Bad TTS: W2 large -->
+				<section>
+					<h2>Bad TTS ⇒ mismatch</h2>
+					<p style="font-size: 0.7em;">Unnatural synthetic speech lands elsewhere in feature space — \( W_2 \) grows.</p>
+					<div id="p5-3" style="width: 80vw; height: 30vh; position: relative; left: 50%; transform: translateX(-50%); margin-top: 0.8em;"></div>
+					<p style="font-size: 0.6em; margin-top: 0.6em;"><em>\( W_2 \) large — but <span class="accent">large compared to what?</span></em></p>
+				</section>
+
+				<!-- 6. Noise anchor + formula -->
+				<section>
+					<h2>Anchor to noise</h2>
+					<p style="font-size: 0.65em;">We also compute \( W_2 \) to a set of <span class="accent">noise distributions</span> (uniform, Gaussian, zeros, ones) — a reference for "totally unrelated".</p>
+					<div id="p5-4" style="width: 80vw; height: 25vh; position: relative; left: 50%; transform: translateX(-50%); margin-top: 0.4em;"></div>
+					<div class="eqbox" style="margin-top: 0.6em; font-size: 0.75em;">
+						\[ \text{TTSDS2}(D,\tilde D,\mathfrak{D}^{\text{NOISE}}) \;=\; 100 \times \frac{W_2^{\text{NOISE}}}{W_2^{\text{REAL}} + W_2^{\text{NOISE}}} \]
+					</div>
+					<p style="font-size: 0.55em; margin-top: 0.5em; color: #6b6b6b;">0 = indistinguishable from noise · 100 = indistinguishable from real speech</p>
+				</section>
+
+				<!-- 7. Four perceptual factors -->
+				<section>
+					<h2>Four perceptual factors</h2>
+					<img src="factors.png" alt="Four perceptual factors" style="max-width: 56%; max-height: 60%; margin: 0.3em auto 0 auto; display: block;">
+					<p style="font-size: 0.65em; margin-top: 0.6em; color:#6b6b6b;"><em>Per-feature \( W_2 \) scores → factor mean → unweighted average = TTSDS2.</em></p>
+				</section>
+
+				<!-- 8. Evaluation setup -->
+				<section>
+					<h2>Evaluation setup</h2>
+					<div style="display: flex; gap: 1.5em; margin-top: 0.8em; font-size: 0.7em;">
+						<div style="flex: 1;">
+							<p><span class="accent">20 TTS systems</span> released 2022–2024<br><span class="muted">open-source, voice-cloning</span></p>
+						</div>
+						<div style="flex: 1;">
+							<p><span class="accent">4 domains</span><br><span class="muted">Clean · Noisy · Wild (YouTube) · Kids</span></p>
+						</div>
+						<div style="flex: 1;">
+							<p><span class="accent">11,282 human ratings</span><br><span class="muted">MOS · CMOS · SMOS · 200 annotators · $19/hr</span></p>
+						</div>
+					</div>
+					<p style="font-size: 0.55em; margin-top: 1.4em; color: #6b6b6b;">Released at <span class="accent">hf.co/datasets/ttsds/listening_test</span></p>
+				</section>
+
+				<!-- 9. Main result -->
+				<section>
+					<h2>Main result</h2>
+					<p style="font-size: 0.55em; margin: 0;">Spearman \( \rho \) vs. human MOS / CMOS / SMOS across 16 objective metrics × 4 domains.</p>
+					<div id="score-table-mount"></div>
+					<p style="font-size: 0.5em; margin: 0.2em 0 0 0; color: #6b6b6b;">
+						<span style="background:#7cb342; color:#fff; padding:0 4px;">0.5…1</span>
+						<span style="background:#e8f5e9; color:#1b5e20; padding:0 4px;">0…0.5</span>
+						<span style="background:#ffebee; color:#b71c1c; padding:0 4px;">−0.5…0</span>
+						<span style="background:#e57373; color:#fff; padding:0 4px;">−1…−0.5</span>
+						&nbsp;·&nbsp;
+						<span style="box-shadow: inset 0 0 0 2px #0a2342; padding: 0 4px; font-weight: 900;">best in column</span>
+					</p>
+					<!-- invisible fragments progressively highlight each domain column group -->
+					<span class="fragment" data-domain="clean"  style="display:none;"></span>
+					<span class="fragment" data-domain="noisy"  style="display:none;"></span>
+					<span class="fragment" data-domain="wild"   style="display:none;"></span>
+					<span class="fragment" data-domain="kids"   style="display:none;"></span>
+				</section>
+
+				<!-- 10. Correlation scatter -->
+				<section>
+					<h2>A continuous scale</h2>
+					<img src="ttsds_scatter.png" alt="Correlation of TTSDS2, SQUIM, X-Vector with human MOS" style="max-width: 80%; max-height: 65%; margin: 0.2em auto 0 auto; display: block;">
+					<p style="font-size: 0.6em; margin-top: 0.4em; color: #6b6b6b;"><em>SQUIM-MOS and X-Vector similarity cluster while TTSDS2 spreads systems smoothly across the range.</em></p>
+				</section>
+
+				<!-- 11. Why the simple mean -->
+				<section>
+					<h2>Why a simple unweighted mean?</h2>
+					<p style="font-size: 0.65em;">Learned factor weights <span class="accent">overfit to training domains</span>, showing the simple mean generalises better under leave-one-domain-out.</p>
+					<div style="display: flex; gap: 1.5em; margin-top: 0.6em; align-items: flex-start; justify-content: center;">
+						<div style="flex: 0 0 auto;">
+							<div style="font-size: 0.5em; color: #6b6b6b; margin-bottom: 0.3em;"><em>Table 4 — LOOCV: simple mean vs. learned weights</em></div>
+							<table class="ablation-table">
+								<thead>
+									<tr><th>Held-Out</th><th>Simple Mean</th><th>Learned</th></tr>
+								</thead>
+								<tbody>
+									<tr><td>Clean</td><td class="win"><strong>0.747</strong></td><td>0.645</td></tr>
+									<tr><td>Noisy</td><td class="win"><strong>0.590</strong></td><td>0.514</td></tr>
+									<tr><td>Wild</td><td class="win"><strong>0.752</strong></td><td>0.658</td></tr>
+									<tr><td>Kids</td><td>0.606</td><td class="win"><strong>0.853</strong></td></tr>
+								</tbody>
+							</table>
+						</div>
+						<div style="flex: 0 0 auto;">
+							<div style="font-size: 0.5em; color: #6b6b6b; margin-bottom: 0.3em;"><em>Table 5 — Learned weights vary drastically by training domain</em></div>
+							<table class="ablation-table weights-table">
+								<thead>
+									<tr><th>Training</th><th>Gen.</th><th>Speak.</th><th>Pros.</th><th>Intel.</th></tr>
+								</thead>
+								<tbody>
+									<tr><td>Clean</td><td class="neg">−0.162</td><td>0.072</td><td>0.048</td><td>0.098</td></tr>
+									<tr><td>Noisy</td><td>0.066</td><td>0.033</td><td>0.004</td><td>0.071</td></tr>
+									<tr><td>Wild</td><td class="neg">−0.017</td><td>0.072</td><td>0.004</td><td class="neg">−0.020</td></tr>
+									<tr><td>Kids</td><td>0.050</td><td>0.101</td><td class="neg">−0.032</td><td>0.026</td></tr>
+									<tr><td>Combined</td><td class="neg">−0.045</td><td>0.066</td><td>0.002</td><td>0.019</td></tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<p style="font-size: 0.6em; margin-top: 0.8em; color: #6b6b6b;"><em>Due to these findings, we keep TTSDS2 fully unsupervised.</em></p>
+				</section>
+
+				<!-- 12. Multilingual + resources -->
+				<section>
+					<h2>Multilingual &amp; resources</h2>
+					<img src="languages.png" alt="TTSDS2 scores across 14 languages" style="max-width: 78%; max-height: 55%; margin: 0.2em auto 0 auto; display: block;">
+					<p style="font-size: 0.6em; margin: 0.5em auto 0 auto; text-align: center;">
+						<span class="accent">14-language benchmark</span><br>pipeline can be reused for future iterations<br>
+						only metric with \( \rho &gt; 0.5 \) across all tested domains.
+					</p>
+					<p style="font-size: 0.6em; margin-top: 0.4em; text-align: center;">
+						<span class="accent">ttsdsbenchmark.com</span> &nbsp;·&nbsp;
+						<span class="muted">github.com/ttsds/ttsds</span> &nbsp;·&nbsp;
+						<span class="muted">hf.co/datasets/ttsds/listening_test</span>
+					</p>
+				</section>
+
+			</div>
+		</div>
+
+		<script src="dist/reveal.js"></script>
+		<script src="plugin/notes/notes.js"></script>
+		<script src="plugin/markdown/markdown.js"></script>
+		<script src="plugin/highlight/highlight.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+		<script>
+			Reveal.initialize({
+				hash: true,
+				progress: false,
+				transition: 'none',
+				slideNumber: true,
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+			});
+		</script>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+		<script>
+			// ------------------------------------------------------------------
+			// TTSDS2 Wasserstein distribution animations
+			// Real distribution (navy #0a2342), Synthetic (orange #f98000),
+			// Noise reference (dashed gray). White background (#ffffff).
+			// ------------------------------------------------------------------
+			let iclrFont;
+
+			const COLOR_BG        = "#ffffff";
+			const COLOR_REAL      = [10, 35, 66];     // navy
+			const COLOR_SYNTH     = [249, 128, 22];   // orange
+			const COLOR_NOISE     = [136, 136, 136];  // gray
+
+			function drawGauss(p, color, fillAlpha, a, b, c, dashed=false) {
+				p.noFill();
+				p.stroke(color[0], color[1], color[2]);
+				p.strokeWeight(2);
+				if (dashed) {
+					// Draw dashed curve by sampling segments
+					let on = true;
+					let segLen = 6;
+					let counter = 0;
+					p.beginShape(p.LINES);
+					let prevX = 0;
+					let prevY = height - a * p.exp(-p.pow(0 - b, 2) / (2 * p.pow(c, 2)));
+					for (let x = 1; x < width; x++) {
+						let y = a * p.exp(-p.pow(x - b, 2) / (2 * p.pow(c, 2)));
+						if (on) {
+							p.vertex(prevX, prevY);
+							p.vertex(x, height - y);
+						}
+						counter++;
+						if (counter >= segLen) { on = !on; counter = 0; }
+						prevX = x;
+						prevY = height - y;
+					}
+					p.endShape();
+				} else {
+					p.beginShape();
+					for (let x = 0; x < width; x++) {
+						let y = a * p.exp(-p.pow(x - b, 2) / (2 * p.pow(c, 2)));
+						p.vertex(x, height - y);
+					}
+					p.endShape();
+				}
+				// Soft fill underneath
+				p.noStroke();
+				p.fill(color[0], color[1], color[2], fillAlpha);
+				p.beginShape();
+				p.vertex(0, height);
+				for (let x = 0; x < width; x++) {
+					let y = a * p.exp(-p.pow(x - b, 2) / (2 * p.pow(c, 2)));
+					p.vertex(x, height - y);
+				}
+				p.vertex(width, height);
+				p.endShape(p.CLOSE);
+			}
+
+			function computeDims(p, widthFrac, heightFrac) {
+				return {
+					w: p.windowWidth * widthFrac,
+					h: p.windowHeight * heightFrac
+				};
+			}
+
+			// ----- Animation 1: two separate distributions, static -----
+			var setupIclr1 = function(p) {
+				p.setup = function() {
+					let c = p.createCanvas(p.windowWidth * 0.8, p.windowHeight * 0.3);
+					c.parent('p5-1');
+				}
+				p.draw = function() {
+					p.background(COLOR_BG);
+					height = p.windowHeight * 0.3;
+					width  = p.windowWidth * 0.8;
+					let hr = height / 400, wr = width / 400;
+					drawGauss(p, COLOR_REAL,  40, 280 * hr, 110 * wr, 28 * wr);
+					drawGauss(p, COLOR_SYNTH, 40, 280 * hr, 290 * wr, 28 * wr);
+				}
+			}
+
+			// ----- Animation 2: two converge (good TTS) -----
+			let t2 = 0, s2 = false;
+			var setupIclr2 = function(p) {
+				const b1_0 = 110, b2_0 = 290, target = 200;
+				p.setup = function() {
+					let c = p.createCanvas(p.windowWidth * 0.8, p.windowHeight * 0.3);
+					c.parent('p5-2');
+				}
+				p.draw = function() {
+					p.background(COLOR_BG);
+					height = p.windowHeight * 0.3;
+					width  = p.windowWidth * 0.8;
+					let hr = height / 400, wr = width / 400;
+					let b1 = p.lerp(b1_0, target, t2);
+					let b2 = p.lerp(b2_0, target, t2);
+					if (s2) t2 += (1 - t2) * 0.04;
+					drawGauss(p, COLOR_REAL,  40, 280 * hr, b1 * wr, 28 * wr);
+					drawGauss(p, COLOR_SYNTH, 40, 280 * hr, b2 * wr, 28 * wr);
+				}
+			}
+
+			// ----- Animation 3: synthetic off-center & narrower (bad TTS) -----
+			let t3 = 0, s3 = false;
+			var setupIclr3 = function(p) {
+				const a1_0 = 280, b1_0 = 200, c1_0 = 28;
+				const a2_0 = 280, b2_0 = 200, c2_0 = 28;
+				const a1_t = 280, b1_t = 200, c1_t = 28;   // real stays put
+				const a2_t = 380, b2_t = 150, c2_t = 14;   // synth becomes narrow & shifted
+				p.setup = function() {
+					let c = p.createCanvas(p.windowWidth * 0.8, p.windowHeight * 0.3);
+					c.parent('p5-3');
+				}
+				p.draw = function() {
+					p.background(COLOR_BG);
+					height = p.windowHeight * 0.3;
+					width  = p.windowWidth * 0.8;
+					let hr = height / 400, wr = width / 400;
+					if (s3) t3 += (1 - t3) * 0.04;
+					let a1 = p.lerp(a1_0, a1_t, t3);
+					let b1 = p.lerp(b1_0, b1_t, t3);
+					let c1 = p.lerp(c1_0, c1_t, t3);
+					let a2 = p.lerp(a2_0, a2_t, t3);
+					let b2 = p.lerp(b2_0, b2_t, t3);
+					let c2 = p.lerp(c2_0, c2_t, t3);
+					drawGauss(p, COLOR_REAL,  40, a1 * hr, b1 * wr, c1 * wr);
+					drawGauss(p, COLOR_SYNTH, 40, a2 * hr, b2 * wr, c2 * wr);
+				}
+			}
+
+			// ----- Animation 4: add noise reference distribution -----
+			let t4 = 0, s4 = false;
+			var setupIclr4 = function(p) {
+				p.setup = function() {
+					let c = p.createCanvas(p.windowWidth * 0.8, p.windowHeight * 0.25);
+					c.parent('p5-4');
+				}
+				p.draw = function() {
+					p.background(COLOR_BG);
+					height = p.windowHeight * 0.25;
+					width  = p.windowWidth * 0.8;
+					let hr = height / 400, wr = width / 400;
+					if (s4) t4 += (1 - t4) * 0.04;
+					// Real
+					drawGauss(p, COLOR_REAL,  40, 280 * hr, 200 * wr, 28 * wr);
+					// Synthetic (slightly off)
+					drawGauss(p, COLOR_SYNTH, 40, 260 * hr, 220 * wr, 30 * wr);
+					// Noise — very wide & low, fades in with t4
+					let noiseAlpha = 255 * t4;
+					p.drawingContext.globalAlpha = t4;
+					drawGauss(p, COLOR_NOISE, 20, 120 * hr, 200 * wr, 120 * wr, true);
+					p.drawingContext.globalAlpha = 1.0;
+				}
+			}
+
+			new p5(setupIclr1);
+			new p5(setupIclr2);
+			new p5(setupIclr3);
+			new p5(setupIclr4);
+
+			// Trigger each animation when its slide is reached.
+			// Slide indices (0-based horizontal):
+			//  0 opener, 1 problem, 2 slide-3 static, 3 slide-4 converge,
+			//  4 slide-5 mismatch, 5 slide-6 noise+formula
+			Reveal.on('slidechanged', function(event) {
+				if (event.indexh === 3) { t2 = 0; s2 = true; }
+				if (event.indexh === 4) { t3 = 0; s3 = true; }
+				if (event.indexh === 5) { t4 = 0; s4 = true; }
+			});
+		</script>
+
+		<script>
+			// ------------------------------------------------------------------
+			// Table 3 — Spearman rank correlations (paper p. 7)
+			// Each row: [name, sep, [[v, bold], ...]]  (12 values: Clean×3, Noisy×3, Wild×3, Kids×3)
+			// sep=true draws a top border (paper uses \midrule between TTSDS2/TTSDS/rest)
+			// ------------------------------------------------------------------
+			const SCORE_ROWS = [
+				['TTSDS2 (Ours)', false, [[0.75,1],[0.69,1],[0.73,1], [0.59,0],[0.54,0],[0.71,0], [0.75,0],[0.71,0],[0.75,0], [0.61,0],[0.50,0],[0.70,0]], 'ttsds2-row'],
+				['TTSDS',         true,  [[0.60,0],[0.62,0],[0.52,0], [0.49,0],[0.61,0],[0.66,0], [0.67,0],[0.57,0],[0.67,0], [0.70,0],[0.52,0],[0.60,0]]],
+				['X-Vector',      true,  [[0.46,0],[0.42,0],[0.56,0], [0.40,0],[0.29,0],[0.77,0], [0.82,0],[0.82,1],[0.62,0], [0.70,0],[0.57,0],[0.75,1]]],
+				['RawNet3',       false, [[0.36,0],[0.26,0],[0.52,0], [0.44,0],[0.37,0],[0.82,1], [0.85,1],[0.80,0],[0.64,0], [0.73,1],[0.61,1],[0.77,1]]],
+				['SQUIM',         false, [[0.68,0],[0.46,0],[0.37,0], [0.48,0],[0.48,0],[0.60,0], [0.62,0],[0.75,0],[0.79,1], [0.57,0],[0.55,0],[0.45,0]]],
+				['ECAPA-TDNN',    false, [[0.36,0],[0.29,0],[0.47,0], [0.29,0],[0.22,0],[0.72,0], [0.81,0],[0.78,0],[0.58,0], [0.69,0],[0.60,0],[0.72,0]]],
+				['DNSMOS',        false, [[0.41,0],[0.37,0],[0.22,0], [0.57,0],[0.36,0],[0.22,0], [0.35,0],[0.28,0],[0.03,0], [0.31,0],[0.10,0],[0.28,0]]],
+				['AE-CE',         false, [[0.60,0],[0.46,0],[0.32,0], [0.58,0],[0.53,0],[0.21,0], [0.19,0],[0.10,0],[0.11,0], [-0.02,0],[-0.12,0],[-0.10,0]]],
+				['AE-CU',         false, [[0.49,0],[0.37,0],[0.30,0], [0.60,1],[0.58,1],[0.13,0], [0.35,0],[0.24,0],[0.22,0], [-0.09,0],[-0.21,0],[-0.13,0]]],
+				['AE-PQ',         false, [[0.49,0],[0.33,0],[0.21,0], [0.55,0],[0.48,0],[0.04,0], [0.21,0],[0.16,0],[0.12,0], [0.03,0],[-0.08,0],[-0.05,0]]],
+				['UTMOSv2',       false, [[0.39,0],[0.25,0],[0.09,0], [0.34,0],[0.36,0],[0.19,0], [0.16,0],[0.14,0],[-0.04,0], [0.05,0],[0.03,0],[-0.02,0]]],
+				['FAD (CLAP)',    false, [[-0.22,0],[0.06,0],[-0.01,0], [0.45,0],[0.30,0],[0.16,0], [-0.03,0],[0.08,0],[0.25,0], [0.12,0],[0.26,0],[0.04,0]]],
+				['UTMOS',         false, [[0.51,0],[0.30,0],[0.31,0], [0.47,0],[0.29,0],[0.00,0], [-0.12,0],[-0.12,0],[-0.26,0], [-0.02,0],[-0.18,0],[-0.04,0]]],
+				['STOI',          false, [[-0.11,0],[0.01,0],[0.02,0], [-0.06,0],[0.00,0],[0.19,0], [0.07,0],[0.41,0],[0.24,0], [-0.32,0],[-0.08,0],[0.05,0]]],
+				['PESQ',          false, [[0.01,0],[-0.16,0],[0.27,0], [-0.34,0],[0.00,0],[0.07,0], [-0.14,0],[0.01,0],[-0.06,0], [-0.08,0],[-0.04,0],[-0.38,0]]],
+				['NISQA',         false, [[0.05,0],[0.00,0],[0.06,0], [0.05,0],[-0.21,0],[-0.53,0], [-0.32,0],[-0.33,0],[-0.64,0], [-0.29,0],[-0.27,0],[-0.46,0]]],
+				['MCD',           false, [[-0.46,0],[-0.37,0],[-0.27,0], [-0.45,0],[-0.58,0],[-0.74,0], [-0.33,0],[-0.45,0],[-0.51,0], [-0.31,0],[-0.13,0],[-0.38,0]]],
+				['WER',           false, [[-0.19,0],[-0.18,0],[-0.17,0], [-0.11,0],[-0.30,0],[-0.13,0], [-0.28,0],[-0.17,0],[-0.22,0], [-0.45,0],[-0.26,0],[-0.39,0]]],
+			];
+
+			function colorClass(v) {
+				if (v >=  0.5) return 'ps';
+				if (v >=  0.0) return 'pw';
+				if (v >= -0.5) return 'nw';
+				return 'ns';
+			}
+
+			function fmt(v) {
+				// Two-decimal with sign, keeping "-" explicit
+				return (v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+			}
+
+			(function buildScoreTable() {
+				const mount = document.getElementById('score-table-mount');
+				if (!mount) return;
+				const domains = ['Clean', 'Noisy', 'Wild', 'Kids'];
+				const subs    = ['MOS', 'CMOS', 'SMOS'];
+
+				let html  = '<table class="score-table"><thead>';
+				html += '<tr><th rowspan="2">Metric</th>';
+				for (const d of domains) html += `<th colspan="3">${d}</th>`;
+				html += '</tr><tr>';
+				for (let i = 0; i < 4; i++) for (const s of subs) html += `<th>${s}</th>`;
+				html += '</tr></thead><tbody>';
+
+				for (const row of SCORE_ROWS) {
+					const [name, sep, vals, extraCls] = row;
+					const cls = (sep ? 'sep ' : '') + (extraCls || '');
+					html += `<tr class="${cls.trim()}"><td>${name}</td>`;
+					for (const [v, bold] of vals) {
+						const inner = bold ? `<strong>${fmt(v)}</strong>` : fmt(v);
+						const tdCls = `s ${colorClass(v)}${bold ? ' bold' : ''}`;
+						html += `<td class="${tdCls}">${inner}</td>`;
+					}
+					html += '</tr>';
+				}
+				html += '</tbody></table>';
+				mount.innerHTML = html;
+			})();
+
+			// Fragment-driven domain highlight: the highest-index currently-shown
+			// fragment with a data-domain attribute wins.
+			function updateDomainHighlight(slide) {
+				if (!slide) return;
+				const table = slide.querySelector('.score-table');
+				if (!table) return;
+				const frags = slide.querySelectorAll('.fragment[data-domain]');
+				let active = null;
+				frags.forEach(f => {
+					if (f.classList.contains('visible')) active = f.dataset.domain;
+				});
+				if (active) table.setAttribute('data-highlight', active);
+				else table.removeAttribute('data-highlight');
+			}
+			Reveal.on('fragmentshown',  e => updateDomainHighlight(e.fragment.closest('section')));
+			Reveal.on('fragmenthidden', e => updateDomainHighlight(e.fragment.closest('section')));
+			Reveal.on('slidechanged',   e => updateDomainHighlight(e.currentSlide));
+		</script>
+
+		<script type="module">
+			import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js'
+			import Spectrogram from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/spectrogram.esm.js'
+
+			const ws = WaveSurfer.create({
+				container: '#opener-spec',
+				url: 'audio.wav',
+				sampleRate: 22050,
+				height: 0,
+				progressColor: 'rgba(249, 128, 22, 0.4)',
+				waveColor: 'rgba(10, 35, 66, 0.3)',
+			})
+
+			ws.registerPlugin(
+				Spectrogram.create({
+					height: 180,
+					frequencyMax: 8000,
+					labels: false,
+					scale: 'mel',
+					windowFunc: 'hann',
+				}),
+			)
+
+			ws.on('interaction', () => ws.play())
+		</script>
+	</body>
+</html>
